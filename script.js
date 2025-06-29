@@ -1,15 +1,15 @@
-// script.js (Versi Final Lengkap dengan Navigasi Bar dan Perbaikan Bug)
+// script.js (Versi Final dengan Optimasi Kinerja & Skeleton Loading)
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- KONFIGURASI ---
     const API_KEY = 'AIzaSyCXetZR21T2WrT42K3VQlrFM-CxAYYvg3U';
     const FOLDER_ID = '1SlotOnzWfK0imRA1uCETvJC076Hmcq5-';
+    const CACHE_DURATION = 30 * 60 * 1000; // 30 menit dalam milidetik
     // --- AKHIR KONFIGURASI ---
 
 
     // --- ELEMEN DOM ---
-    // Navigasi & Halaman
     const hamburger = document.querySelector('.hamburger');
     const menuWrapper = document.querySelector('.menu-wrapper');
     const navLinks = document.querySelectorAll('.nav-link');
@@ -17,13 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const pages = document.querySelectorAll('.page-content');
     const dropdownNav = document.querySelector('.dropdown-nav');
     const categoryDropdown = document.getElementById('category-dropdown');
-
-    // Konten
     const bookGallery = document.getElementById('book-gallery');
     const loader = document.getElementById('loader');
     const searchInput = document.getElementById('searchInput');
-    
-    // Modal PDF
     const modal = document.getElementById('pdf-modal');
     const closeModalBtn = document.querySelector('.close-button');
     const pdfCanvas = document.getElementById('pdf-canvas');
@@ -48,28 +44,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- EVENT LISTENERS SETUP ---
     function setupEventListeners() {
-        // Menu Hamburger
         hamburger.addEventListener('click', toggleMobileMenu);
-
-        // Navigasi Halaman
         navLinks.forEach(link => link.addEventListener('click', handlePageNavigation));
         navLogo.addEventListener('click', handlePageNavigation);
-
-        // Klik dropdown kategori di mobile
         dropdownNav.querySelector('.nav-link').addEventListener('click', (e) => {
             if (window.innerWidth <= 992) {
                 e.preventDefault();
                 dropdownNav.classList.toggle('open');
             }
         });
-
-        // Pencarian
         searchInput.addEventListener('input', handleSearch);
-
-        // Buka Buku
         bookGallery.addEventListener('click', handleBookClick);
-
-        // Modal Controls
         setupModalControls();
     }
 
@@ -85,28 +70,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageId = e.currentTarget.dataset.page;
         if (pageId) {
             showPage(pageId);
-            // Tutup menu mobile setelah navigasi
-            if (menuWrapper.classList.contains('active')) {
-                toggleMobileMenu();
-            }
+            if (menuWrapper.classList.contains('active')) toggleMobileMenu();
         }
     }
 
     function showPage(pageId) {
-        pages.forEach(page => {
-            page.classList.toggle('active', page.id === `${pageId}-page`);
-        });
-        navLinks.forEach(link => {
-            link.classList.toggle('active', link.dataset.page === pageId);
-        });
+        pages.forEach(page => page.classList.toggle('active', page.id === `${pageId}-page`));
+        navLinks.forEach(link => link.classList.toggle('active', link.dataset.page === pageId));
     }
 
     function handleSearch(e) {
         const searchTerm = e.target.value.toLowerCase();
-        // Pencarian hanya relevan di halaman beranda
-        if (!document.getElementById('home-page').classList.contains('active')) {
-            showPage('home');
-        }
+        if (!document.getElementById('home-page').classList.contains('active')) showPage('home');
         
         const activeCategoryLink = categoryDropdown.querySelector('a.active');
         const activeCategory = activeCategoryLink ? activeCategoryLink.dataset.category : 'Semua Kategori';
@@ -116,34 +91,23 @@ document.addEventListener('DOMContentLoaded', () => {
             booksToSearch = allBooks.filter(book => book.category === activeCategory);
         }
 
-        const filteredBooks = booksToSearch.filter(book => 
-            book.name.toLowerCase().includes(searchTerm)
-        );
+        const filteredBooks = booksToSearch.filter(book => book.name.toLowerCase().includes(searchTerm));
         displayBooks(filteredBooks);
     }
     
     function handleBookClick(e) {
         const card = e.target.closest('.book-card');
-        if (card) {
-            openPdfViewer(card.dataset.fileId);
-        }
+        if (card) openPdfViewer(card.dataset.fileId);
     }
     
     function handleCategoryClick(e) {
         e.preventDefault();
         const selectedCategory = e.target.dataset.category;
-        showPage('home'); // Pindah ke halaman beranda saat kategori dipilih
-        
-        // Hapus & set 'active' class
+        showPage('home');
         categoryDropdown.querySelectorAll('a').forEach(a => a.classList.remove('active'));
         e.target.classList.add('active');
-        
-        // Tutup menu mobile jika terbuka
-        if (menuWrapper.classList.contains('active')) {
-            toggleMobileMenu();
-        }
-
-        searchInput.value = ''; // Reset pencarian
+        if (menuWrapper.classList.contains('active')) toggleMobileMenu();
+        searchInput.value = '';
         
         if (selectedCategory === 'Semua Kategori') {
             displayBooks(allBooks);
@@ -163,51 +127,92 @@ document.addEventListener('DOMContentLoaded', () => {
         gapi.client.init({
             apiKey: API_KEY,
             discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-        }).then(fetchFoldersAndFiles);
+        }).then(loadBooks); // Panggil fungsi utama untuk memuat buku
     }
 
-    function fetchFoldersAndFiles() {
-        loader.style.display = 'block';
-        bookGallery.style.display = 'none';
+    /**
+     * FUNGSI BARU: Memeriksa cache sebelum mengambil data dari API
+     */
+    function loadBooks() {
+        const cachedBooks = sessionStorage.getItem('bookCache');
+        const cacheTimestamp = sessionStorage.getItem('cacheTimestamp');
 
+        if (cachedBooks && cacheTimestamp && (Date.now() - cacheTimestamp < CACHE_DURATION)) {
+            // Jika ada cache yang valid, gunakan
+            allBooks = JSON.parse(cachedBooks);
+            initializeApp();
+        } else {
+            // Jika tidak, ambil dari API
+            displaySkeletonLoading(); // Tampilkan skeleton
+            fetchFoldersAndFiles();
+        }
+    }
+
+    /**
+     * FUNGSI BARU: Menampilkan kerangka loading
+     */
+    function displaySkeletonLoading() {
+        loader.style.display = 'none';
+        bookGallery.style.display = 'grid';
+        bookGallery.innerHTML = '';
+        for (let i = 0; i < 12; i++) {
+            const skeleton = document.createElement('div');
+            skeleton.className = 'skeleton-card';
+            bookGallery.appendChild(skeleton);
+        }
+    }
+
+    /**
+     * FUNGSI DIPERBARUI: Mengambil data dengan lebih efisien
+     */
+    function fetchFoldersAndFiles() {
+        const fields = "files(id, name, mimeType, thumbnailLink)"; // Minta thumbnailLink dari awal!
         gapi.client.drive.files.list({
             'q': `'${FOLDER_ID}' in parents`,
             'pageSize': 100,
-            'fields': "files(id, name, mimeType)"
+            'fields': fields
         }).then(response => {
             const items = response.result.files;
             const folders = items.filter(item => item.mimeType === 'application/vnd.google-apps.folder');
             const rootFiles = items.filter(item => item.mimeType === 'application/pdf');
 
-            allBooks.push(...rootFiles.map(file => ({ ...file, category: 'Lainnya' })));
-            processFolders(folders);
+            let fetchedBooks = rootFiles.map(file => ({ ...file, category: 'Lainnya' }));
+            
+            // Buat promise untuk setiap folder
+            const folderPromises = folders.map(folder =>
+                gapi.client.drive.files.list({
+                    q: `'${folder.id}' in parents and mimeType='application/pdf'`,
+                    pageSize: 100,
+                    fields: fields
+                }).then(res => res.result.files.map(file => ({ ...file, category: folder.name })))
+            );
+
+            // Jalankan semua promise secara paralel
+            Promise.all(folderPromises).then(results => {
+                results.forEach(booksFromFolder => fetchedBooks.push(...booksFromFolder));
+                allBooks = fetchedBooks.sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Simpan ke cache
+                sessionStorage.setItem('bookCache', JSON.stringify(allBooks));
+                sessionStorage.setItem('cacheTimestamp', Date.now());
+                
+                initializeApp();
+            });
         });
     }
 
-    async function processFolders(folders) {
-        const promises = folders.map(folder => 
-            gapi.client.drive.files.list({
-                q: `'${folder.id}' in parents and mimeType='application/pdf'`,
-                pageSize: 100,
-                fields: "files(id, name)"
-            }).then(response => 
-                response.result.files.map(file => ({ ...file, category: folder.name }))
-            )
-        );
-        
-        const results = await Promise.all(promises);
-        results.forEach(booksFromFolder => allBooks.push(...booksFromFolder));
-        allBooks.sort((a, b) => a.name.localeCompare(b.name));
-        
-        displayCategories();
-        displayBooks(allBooks);
-
+    /**
+     * FUNGSI BARU: Menginisialisasi aplikasi setelah data siap
+     */
+    function initializeApp() {
         loader.style.display = 'none';
         bookGallery.style.display = 'grid';
+        displayCategories();
+        displayBooks(allBooks);
     }
 
     function displayCategories() {
-        const categories = ['Semua Kategori', ...new Set(allBooks.map(book => book.category))];
+        const categories = ['Semua Kategori', ...new Set(allBooks.map(book => book.category || 'Lainnya'))];
         categoryDropdown.innerHTML = '';
         
         categories.forEach(category => {
@@ -221,24 +226,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function displayBooks(books) {
-        bookGallery.innerHTML = '<div class="loader"></div>';
-        const thumbnailPromises = books.map(book => 
-            gapi.client.drive.files.get({
-                fileId: book.id,
-                fields: 'thumbnailLink'
-            }).then(response => ({...book, thumbnailLink: response.result.thumbnailLink}))
-        );
-
-        const booksWithThumbnails = await Promise.all(thumbnailPromises);
+    /**
+     * FUNGSI DIPERBARUI: Tidak perlu lagi ambil thumbnail, tinggal tampilkan dengan animasi
+     */
+    function displayBooks(books) {
         bookGallery.innerHTML = '';
-        
-        if (booksWithThumbnails.length > 0) {
-            booksWithThumbnails.forEach(book => {
+        if (books.length > 0) {
+            books.forEach((book, index) => {
                 const card = document.createElement('div');
                 card.className = 'book-card';
                 card.dataset.fileId = book.id;
-                card.dataset.fileName = book.name;
+                card.style.animationDelay = `${index * 50}ms`; // Delay untuk animasi staggered
+
                 const cover = document.createElement('div');
                 cover.className = 'book-cover';
                 if (book.thumbnailLink) {
@@ -246,9 +245,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     cover.textContent = 'Tidak Ada Sampul';
                 }
+
                 const title = document.createElement('div');
                 title.className = 'book-title';
                 title.textContent = book.name.replace(/\.pdf$/i, '');
+                
                 card.appendChild(cover);
                 card.appendChild(title);
                 bookGallery.appendChild(card);
@@ -259,13 +260,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- LOGIKA MODAL PDF ---
+    // --- LOGIKA MODAL PDF (Tidak berubah signifikan) ---
     function setupModalControls() {
         closeModalBtn.addEventListener('click', () => {
             modal.classList.remove('visible');
             pdfDoc = null;
         });
-        window.addEventListener('click', (e) => {
+        window.addEventListener('click', e => {
             if (e.target == modal) {
                 modal.classList.remove('visible');
                 pdfDoc = null;
@@ -303,7 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // FUNGSI INI SUDAH DIPERBAIKI
     function renderPage(num) {
         pageRendering = true;
         viewerLoader.style.display = 'block';
