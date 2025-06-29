@@ -1,4 +1,4 @@
-// script.js (Versi Final dengan Fitur Dropdown Kategori)
+// script.js (Versi Final dengan Navigasi Halaman & Hamburger)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -8,17 +8,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- AKHIR KONFIGURASI ---
 
 
-    // Elemen DOM
+    // --- ELEMEN DOM ---
+    // Navigasi & Halaman
+    const hamburger = document.querySelector('.hamburger');
+    const menuWrapper = document.querySelector('.menu-wrapper');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const navLogo = document.querySelector('.nav-logo');
+    const pages = document.querySelectorAll('.page-content');
+    const dropdownNav = document.querySelector('.dropdown-nav');
+    const categoryDropdown = document.getElementById('category-dropdown');
+
+    // Konten
     const bookGallery = document.getElementById('book-gallery');
     const loader = document.getElementById('loader');
     const searchInput = document.getElementById('searchInput');
-    // Elemen baru untuk dropdown
-    const dropdownWrapper = document.querySelector('.dropdown-wrapper');
-    const dropdownBtn = document.getElementById('dropdown-btn');
-    const dropdownContent = document.getElementById('category-dropdown');
-    const dropdownBtnText = dropdownBtn.querySelector('span');
     
-    // Elemen DOM untuk modal
+    // Modal PDF
     const modal = document.getElementById('pdf-modal');
     const closeModalBtn = document.querySelector('.close-button');
     const pdfCanvas = document.getElementById('pdf-canvas');
@@ -28,34 +33,136 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageCountSpan = document.getElementById('page-count');
     const viewerLoader = document.getElementById('viewer-loader');
     
+    // --- STATE ---
     let allBooks = [];
     let pdfDoc = null;
     let pageNum = 1;
     let pageRendering = false;
     let pageNumPending = null;
 
+    // --- INISIALISASI ---
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
+    loadGapi();
+    setupEventListeners();
 
-    // --- LOGIKA DROPDOWN BARU ---
-    dropdownBtn.addEventListener('click', () => {
-        dropdownWrapper.classList.toggle('open');
-    });
 
-    window.addEventListener('click', (e) => {
-        if (!dropdownWrapper.contains(e.target)) {
-            dropdownWrapper.classList.remove('open');
+    // --- EVENT LISTENERS SETUP ---
+    function setupEventListeners() {
+        // Menu Hamburger
+        hamburger.addEventListener('click', toggleMobileMenu);
+
+        // Navigasi Halaman
+        navLinks.forEach(link => link.addEventListener('click', handlePageNavigation));
+        navLogo.addEventListener('click', handlePageNavigation);
+
+        // Klik dropdown kategori di mobile
+        dropdownNav.querySelector('.nav-link').addEventListener('click', (e) => {
+            if (window.innerWidth <= 992) {
+                e.preventDefault();
+                dropdownNav.classList.toggle('open');
+            }
+        });
+
+        // Pencarian
+        searchInput.addEventListener('input', handleSearch);
+
+        // Buka Buku
+        bookGallery.addEventListener('click', handleBookClick);
+
+        // Modal Controls
+        setupModalControls();
+    }
+
+
+    // --- HANDLER FUNCTIONS ---
+    function toggleMobileMenu() {
+        hamburger.classList.toggle('active');
+        menuWrapper.classList.toggle('active');
+    }
+
+    function handlePageNavigation(e) {
+        e.preventDefault();
+        const pageId = e.currentTarget.dataset.page;
+        if (pageId) {
+            showPage(pageId);
+            // Tutup menu mobile setelah navigasi
+            if (menuWrapper.classList.contains('active')) {
+                toggleMobileMenu();
+            }
         }
-    });
-    // --- AKHIR LOGIKA DROPDOWN ---
+    }
 
+    function showPage(pageId) {
+        pages.forEach(page => {
+            page.classList.toggle('active', page.id === `${pageId}-page`);
+        });
+        navLinks.forEach(link => {
+            link.classList.toggle('active', link.dataset.page === pageId);
+        });
+    }
+
+    function handleSearch(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        // Pencarian hanya relevan di halaman beranda
+        if (!document.getElementById('home-page').classList.contains('active')) {
+            showPage('home');
+        }
+        
+        const activeCategoryLink = categoryDropdown.querySelector('a.active');
+        const activeCategory = activeCategoryLink ? activeCategoryLink.dataset.category : 'Semua Kategori';
+        
+        let booksToSearch = allBooks;
+        if (activeCategory !== 'Semua Kategori') {
+            booksToSearch = allBooks.filter(book => book.category === activeCategory);
+        }
+
+        const filteredBooks = booksToSearch.filter(book => 
+            book.name.toLowerCase().includes(searchTerm)
+        );
+        displayBooks(filteredBooks);
+    }
+    
+    function handleBookClick(e) {
+        const card = e.target.closest('.book-card');
+        if (card) {
+            openPdfViewer(card.dataset.fileId);
+        }
+    }
+    
+    function handleCategoryClick(e) {
+        e.preventDefault();
+        const selectedCategory = e.target.dataset.category;
+        showPage('home'); // Pindah ke halaman beranda saat kategori dipilih
+        
+        // Hapus & set 'active' class
+        categoryDropdown.querySelectorAll('a').forEach(a => a.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        // Tutup menu mobile jika terbuka
+        if (menuWrapper.classList.contains('active')) {
+            toggleMobileMenu();
+        }
+
+        searchInput.value = ''; // Reset pencarian
+        
+        if (selectedCategory === 'Semua Kategori') {
+            displayBooks(allBooks);
+        } else {
+            const filteredBooks = allBooks.filter(book => book.category === selectedCategory);
+            displayBooks(filteredBooks);
+        }
+    }
+
+
+    // --- LOGIKA UTAMA (API, DISPLAY, DLL) ---
     function loadGapi() {
         gapi.load('client', initClient);
     }
 
     function initClient() {
         gapi.client.init({
-            'apiKey': API_KEY,
-            'discoveryDocs': ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+            apiKey: API_KEY,
+            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
         }).then(fetchFoldersAndFiles);
     }
 
@@ -80,20 +187,16 @@ document.addEventListener('DOMContentLoaded', () => {
     async function processFolders(folders) {
         const promises = folders.map(folder => 
             gapi.client.drive.files.list({
-                'q': `'${folder.id}' in parents and mimeType='application/pdf'`,
-                'pageSize': 100,
-                'fields': "files(id, name)"
-            }).then(response => {
-                const files = response.result.files;
-                return files.map(file => ({ ...file, category: folder.name }));
-            })
+                q: `'${folder.id}' in parents and mimeType='application/pdf'`,
+                pageSize: 100,
+                fields: "files(id, name)"
+            }).then(response => 
+                response.result.files.map(file => ({ ...file, category: folder.name }))
+            )
         );
         
         const results = await Promise.all(promises);
-        results.forEach(booksFromFolder => {
-            allBooks.push(...booksFromFolder);
-        });
-
+        results.forEach(booksFromFolder => allBooks.push(...booksFromFolder));
         allBooks.sort((a, b) => a.name.localeCompare(b.name));
         
         displayCategories();
@@ -103,59 +206,23 @@ document.addEventListener('DOMContentLoaded', () => {
         bookGallery.style.display = 'grid';
     }
 
-    /**
-     * LOGIKA BARU: Mengisi item ke dalam dropdown menu.
-     */
     function displayCategories() {
         const categories = ['Semua Kategori', ...new Set(allBooks.map(book => book.category))];
-        dropdownContent.innerHTML = '';
+        categoryDropdown.innerHTML = '';
         
         categories.forEach(category => {
             const link = document.createElement('a');
+            link.href = "#";
             link.textContent = category;
             link.dataset.category = category;
-            
-            if (category === 'Semua Kategori') {
-                link.classList.add('active');
-            }
-            
+            if (category === 'Semua Kategori') link.classList.add('active');
             link.addEventListener('click', handleCategoryClick);
-            dropdownContent.appendChild(link);
+            categoryDropdown.appendChild(link);
         });
-    }
-    
-    /**
-     * LOGIKA BARU: Menangani klik pada item dropdown.
-     */
-    function handleCategoryClick(e) {
-        e.preventDefault(); // Mencegah link melakukan navigasi
-        const selectedCategory = e.target.dataset.category;
-        
-        // Update teks tombol utama
-        dropdownBtnText.textContent = selectedCategory;
-
-        // Tutup dropdown
-        dropdownWrapper.classList.remove('open');
-        
-        // Hapus class 'active' dari semua link, lalu tambahkan ke yang diklik
-        document.querySelectorAll('.dropdown-content a').forEach(a => a.classList.remove('active'));
-        e.target.classList.add('active');
-        
-        // Kosongkan pencarian
-        searchInput.value = '';
-
-        // Filter buku berdasarkan kategori
-        if (selectedCategory === 'Semua Kategori') {
-            displayBooks(allBooks);
-        } else {
-            const filteredBooks = allBooks.filter(book => book.category === selectedCategory);
-            displayBooks(filteredBooks);
-        }
     }
 
     async function displayBooks(books) {
-        bookGallery.innerHTML = '<div class="loader"></div>'; // Tampilkan loader sementara
-        
+        bookGallery.innerHTML = '<div class="loader"></div>';
         const thumbnailPromises = books.map(book => 
             gapi.client.drive.files.get({
                 fileId: book.id,
@@ -164,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         const booksWithThumbnails = await Promise.all(thumbnailPromises);
-        bookGallery.innerHTML = ''; // Hapus loader
+        bookGallery.innerHTML = '';
         
         if (booksWithThumbnails.length > 0) {
             booksWithThumbnails.forEach(book => {
@@ -172,20 +239,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.className = 'book-card';
                 card.dataset.fileId = book.id;
                 card.dataset.fileName = book.name;
-
                 const cover = document.createElement('div');
                 cover.className = 'book-cover';
                 if (book.thumbnailLink) {
-                    const highResThumb = book.thumbnailLink.replace('s220', 's400');
-                    cover.innerHTML = `<img src="${highResThumb}" alt="Sampul ${book.name}" loading="lazy">`;
+                    cover.innerHTML = `<img src="${book.thumbnailLink.replace('s220', 's400')}" alt="Sampul ${book.name}" loading="lazy">`;
                 } else {
                     cover.textContent = 'Tidak Ada Sampul';
                 }
-
                 const title = document.createElement('div');
                 title.className = 'book-title';
                 title.textContent = book.name.replace(/\.pdf$/i, '');
-
                 card.appendChild(cover);
                 card.appendChild(title);
                 bookGallery.appendChild(card);
@@ -195,32 +258,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    searchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const activeCategoryLink = document.querySelector('.dropdown-content a.active');
-        const activeCategory = activeCategoryLink.dataset.category;
-        
-        let booksToSearch = allBooks;
-        if (activeCategory !== 'Semua Kategori') {
-            booksToSearch = allBooks.filter(book => book.category === activeCategory);
-        }
 
-        const filteredBooks = booksToSearch.filter(book => 
-            book.name.toLowerCase().includes(searchTerm)
-        );
-        displayBooks(filteredBooks);
-    });
-
-    // ===================================
-    // KODE MODAL VIEWER TIDAK BERUBAH
-    // ===================================
-    bookGallery.addEventListener('click', (e) => {
-        const card = e.target.closest('.book-card');
-        if (card) {
-            const fileId = card.dataset.fileId;
-            openPdfViewer(fileId);
-        }
-    });
+    // --- LOGIKA MODAL PDF (TIDAK BERUBAH) ---
+    function setupModalControls() {
+        closeModalBtn.addEventListener('click', () => {
+            modal.classList.remove('visible');
+            pdfDoc = null;
+        });
+        window.addEventListener('click', (e) => {
+            if (e.target == modal) {
+                modal.classList.remove('visible');
+                pdfDoc = null;
+            }
+        });
+        prevPageBtn.addEventListener('click', () => {
+            if (pageNum <= 1) return;
+            pageNum--;
+            queueRenderPage(pageNum);
+        });
+        nextPageBtn.addEventListener('click', () => {
+            if (pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            queueRenderPage(pageNum);
+        });
+    }
 
     function openPdfViewer(fileId) {
         modal.classList.add('visible');
@@ -228,19 +289,14 @@ document.addEventListener('DOMContentLoaded', () => {
         pdfCanvas.style.display = 'none';
 
         const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
-        
-        const loadingTask = pdfjsLib.getDocument({ 
-            url: url,
-            cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/cmaps/`,
-            cMapPacked: true,
-        });
+        const loadingTask = pdfjsLib.getDocument({ url, cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/cmaps/`, cMapPacked: true });
 
         loadingTask.promise.then(pdf => {
             pdfDoc = pdf;
             pageCountSpan.textContent = pdf.numPages;
             pageNum = 1;
             renderPage(pageNum);
-        }).catch(err => {
+        }, err => {
             console.error("Error loading PDF:", err);
             viewerLoader.style.display = 'none';
             document.getElementById('pdf-viewer-container').innerHTML = "<p style='color:red;'>Gagal memuat PDF.</p>";
@@ -249,78 +305,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderPage(num) {
         pageRendering = true;
-        viewerLoader.style.display = 'block';
-        pdfCanvas.style.display = 'none';
-        
         pdfDoc.getPage(num).then(page => {
-            const pdfViewerContainer = document.getElementById('pdf-viewer-container');
-            const containerWidth = pdfViewerContainer.clientWidth;
-            const viewportDefault = page.getViewport({ scale: 1 });
-            const scale = containerWidth / viewportDefault.width;
-            const viewport = page.getViewport({ scale: scale });
-
+            const containerWidth = document.getElementById('pdf-viewer-container').clientWidth;
+            const viewport = page.getViewport({ scale: containerWidth / page.getViewport({ scale: 1 }).width });
             const context = pdfCanvas.getContext('2d');
             pdfCanvas.height = viewport.height;
             pdfCanvas.width = viewport.width;
-
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport
-            };
-
-            const renderTask = page.render(renderContext);
+            const renderTask = page.render({ canvasContext: context, viewport: viewport });
             renderTask.promise.then(() => {
                 pageRendering = false;
-                viewerLoader.style.display = 'none';
-                pdfCanvas.style.display = 'block';
-
                 if (pageNumPending !== null) {
                     renderPage(pageNumPending);
                     pageNumPending = null;
                 }
             });
         });
-
         pageNumSpan.textContent = num;
         updateNavButtons();
     }
 
     function queueRenderPage(num) {
-        if (pageRendering) {
-            pageNumPending = num;
-        } else {
-            renderPage(num);
-        }
+        if (pageRendering) pageNumPending = num;
+        else renderPage(num);
     }
 
     function updateNavButtons() {
         prevPageBtn.disabled = (pageNum <= 1);
         nextPageBtn.disabled = (pageNum >= pdfDoc.numPages);
     }
-    
-    prevPageBtn.addEventListener('click', () => {
-        if (pageNum <= 1) return;
-        pageNum--;
-        queueRenderPage(pageNum);
-    });
-
-    nextPageBtn.addEventListener('click', () => {
-        if (pageNum >= pdfDoc.numPages) return;
-        pageNum++;
-        queueRenderPage(pageNum);
-    });
-
-    closeModalBtn.addEventListener('click', () => {
-        modal.classList.remove('visible');
-        pdfDoc = null;
-    });
-
-    window.addEventListener('click', (e) => {
-        if (e.target == modal) {
-            modal.classList.remove('visible');
-            pdfDoc = null;
-        }
-    });
-
-    loadGapi();
 });
