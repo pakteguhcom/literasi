@@ -1,14 +1,9 @@
-// script.js (Versi Final Lengkap)
+// script.js (Versi Final dengan Fitur Kategori)
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- KONFIGURASI ---
-    // PENTING: Kunci API ini terlihat oleh publik. Untuk keamanan, batasi kunci ini
-    // di Google Cloud Console agar hanya dapat digunakan oleh domain website Anda.
     const API_KEY = 'AIzaSyCXetZR21T2WrT42K3VQlrFM-CxAYYvg3U';
-    
-    // ID Folder Google Drive Anda
-    // Diambil dari URL: https://drive.google.com/drive/folders/ID_FOLDER_ANDA
     const FOLDER_ID = '1SlotOnzWfK0imRA1uCETvJC076Hmcq5-';
     // --- AKHIR KONFIGURASI ---
 
@@ -17,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookGallery = document.getElementById('book-gallery');
     const loader = document.getElementById('loader');
     const searchInput = document.getElementById('searchInput');
+    const categoryFilters = document.getElementById('category-filters');
+
+    // ... (Elemen DOM untuk modal tetap sama)
     const modal = document.getElementById('pdf-modal');
     const closeModalBtn = document.querySelector('.close-button');
     const pdfCanvas = document.getElementById('pdf-canvas');
@@ -26,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageCountSpan = document.getElementById('page-count');
     const viewerLoader = document.getElementById('viewer-loader');
     
-    let allBooks = [];
+    let allBooks = []; // Sekarang akan berisi objek {..., category: 'Nama Kategori'}
     let pdfDoc = null;
     let pageNum = 1;
     let pageRendering = false;
@@ -42,35 +40,136 @@ document.addEventListener('DOMContentLoaded', () => {
         gapi.client.init({
             'apiKey': API_KEY,
             'discoveryDocs': ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-        }).then(fetchBooks);
+        }).then(fetchFoldersAndFiles); // Ganti fungsi yang dipanggil
     }
 
-    function fetchBooks() {
+    /**
+     * LOGIKA BARU: Tahap 1
+     * Mengambil semua item (folder dan file) dari folder utama.
+     */
+    function fetchFoldersAndFiles() {
         loader.style.display = 'block';
         bookGallery.style.display = 'none';
 
         gapi.client.drive.files.list({
-            'q': `'${FOLDER_ID}' in parents and mimeType='application/pdf'`,
+            'q': `'${FOLDER_ID}' in parents`,
             'pageSize': 100,
-            'fields': "files(id, name, thumbnailLink)"
+            'fields': "files(id, name, mimeType)" // Ambil tipe mime untuk membedakan folder/file
         }).then(response => {
-            const files = response.result.files;
-            allBooks = files.sort((a, b) => a.name.localeCompare(b.name));
-            displayBooks(allBooks);
-            loader.style.display = 'none';
-            bookGallery.style.display = 'grid';
-        }).catch(err => {
-            console.error("Error fetching files:", err);
-            loader.style.display = 'none';
-            bookGallery.innerHTML = "<p style='text-align:center; color: red;'>Gagal memuat data buku.</p>";
-            bookGallery.style.display = 'block';
+            const items = response.result.files;
+            
+            // Pisahkan antara folder (kategori) dan file PDF di folder utama
+            const folders = items.filter(item => item.mimeType === 'application/vnd.google-apps.folder');
+            const rootFiles = items.filter(item => item.mimeType === 'application/pdf');
+
+            // Tambahkan file di folder utama ke daftar buku dengan kategori 'Lainnya'
+            allBooks.push(...rootFiles.map(file => ({ ...file, category: 'Lainnya' })));
+            
+            // Proses setiap folder untuk mengambil file PDF di dalamnya
+            processFolders(folders);
         });
     }
 
-    function displayBooks(books) {
+    /**
+     * LOGIKA BARU: Tahap 2
+     * Memproses setiap folder untuk mengambil PDF di dalamnya secara paralel.
+     * @param {Array} folders - Daftar folder yang akan diproses.
+     */
+    async function processFolders(folders) {
+        // Buat array dari promise, di mana setiap promise mengambil file dari satu folder
+        const promises = folders.map(folder => 
+            gapi.client.drive.files.list({
+                'q': `'${folder.id}' in parents and mimeType='application/pdf'`,
+                'pageSize': 100,
+                'fields': "files(id, name)"
+            }).then(response => {
+                // Tambahkan kategori ke setiap buku yang ditemukan
+                const files = response.result.files;
+                return files.map(file => ({ ...file, category: folder.name }));
+            })
+        );
+        
+        // Tunggu semua promise (pengambilan file) selesai
+        const results = await Promise.all(promises);
+
+        // Gabungkan semua buku dari semua folder ke dalam `allBooks`
+        results.forEach(booksFromFolder => {
+            allBooks.push(...booksFromFolder);
+        });
+
+        // Setelah semua buku terkumpul, urutkan dan tampilkan
+        allBooks.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Tampilkan semuanya
+        displayCategories();
+        displayBooks(allBooks);
+
+        loader.style.display = 'none';
+        bookGallery.style.display = 'grid';
+    }
+
+    /**
+     * LOGIKA BARU: Menampilkan tombol-tombol filter kategori.
+     */
+    function displayCategories() {
+        // Ambil nama kategori unik dari semua buku
+        const categories = ['Semua', ...new Set(allBooks.map(book => book.category))];
+        categoryFilters.innerHTML = '';
+        
+        categories.forEach(category => {
+            const button = document.createElement('button');
+            button.className = 'filter-btn';
+            button.textContent = category;
+            button.dataset.category = category;
+            
+            if (category === 'Semua') {
+                button.classList.add('active');
+            }
+            
+            button.addEventListener('click', handleCategoryClick);
+            categoryFilters.appendChild(button);
+        });
+    }
+    
+    /**
+     * LOGIKA BARU: Menangani klik pada tombol filter kategori.
+     * @param {Event} e - Event klik.
+     */
+    function handleCategoryClick(e) {
+        const selectedCategory = e.target.dataset.category;
+        
+        // Hapus class 'active' dari semua tombol, lalu tambahkan ke yang diklik
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        // Filter buku berdasarkan kategori yang dipilih
+        if (selectedCategory === 'Semua') {
+            displayBooks(allBooks);
+        } else {
+            const filteredBooks = allBooks.filter(book => book.category === selectedCategory);
+            displayBooks(filteredBooks);
+        }
+    }
+
+    /**
+     * Diperbarui: Sekarang mengambil thumbnailLink karena tidak diambil di awal.
+     * @param {Array} books - Array objek buku untuk ditampilkan.
+     */
+    async function displayBooks(books) {
         bookGallery.innerHTML = '';
-        if (books && books.length > 0) {
-            books.forEach(book => {
+        
+        // Buat promise untuk mengambil thumbnail untuk setiap buku yang ditampilkan
+        const thumbnailPromises = books.map(book => 
+            gapi.client.drive.files.get({
+                fileId: book.id,
+                fields: 'thumbnailLink'
+            }).then(response => ({...book, thumbnailLink: response.result.thumbnailLink}))
+        );
+
+        const booksWithThumbnails = await Promise.all(thumbnailPromises);
+        
+        if (booksWithThumbnails.length > 0) {
+            booksWithThumbnails.forEach(book => {
                 const card = document.createElement('div');
                 card.className = 'book-card';
                 card.dataset.fileId = book.id;
@@ -94,18 +193,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 bookGallery.appendChild(card);
             });
         } else {
-            bookGallery.innerHTML = "<p style='text-align:center;'>Tidak ada buku yang ditemukan.</p>";
+            bookGallery.innerHTML = "<p style='text-align:center;'>Tidak ada buku yang ditemukan di kategori ini.</p>";
         }
     }
 
+    // Fungsi pencarian tetap sama
     searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        const filteredBooks = allBooks.filter(book => 
+        // Pastikan filter aktif tetap berlaku saat mencari
+        const activeCategoryBtn = document.querySelector('.filter-btn.active');
+        const activeCategory = activeCategoryBtn.dataset.category;
+        
+        let booksToSearch = allBooks;
+        if (activeCategory !== 'Semua') {
+            booksToSearch = allBooks.filter(book => book.category === activeCategory);
+        }
+
+        const filteredBooks = booksToSearch.filter(book => 
             book.name.toLowerCase().includes(searchTerm)
         );
         displayBooks(filteredBooks);
     });
 
+    // ==========================================================
+    // SISA KODE (MODAL VIEWER) TIDAK ADA PERUBAHAN
+    // Cukup salin dari kode script.js Anda yang sudah ada
+    // ==========================================================
     bookGallery.addEventListener('click', (e) => {
         const card = e.target.closest('.book-card');
         if (card) {
@@ -139,27 +252,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * Merender halaman PDF dengan skala dinamis agar pas di layar
-     * @param {number} num - Nomor halaman yang akan dirender
-     */
     function renderPage(num) {
         pageRendering = true;
         viewerLoader.style.display = 'block';
         pdfCanvas.style.display = 'none';
         
         pdfDoc.getPage(num).then(page => {
-            // --- LOGIKA SKALA DINAMIS ---
             const pdfViewerContainer = document.getElementById('pdf-viewer-container');
-            // Dapatkan lebar kontainer (dikurangi padding jika ada)
             const containerWidth = pdfViewerContainer.clientWidth;
-            // Dapatkan viewport PDF dengan skala 1 untuk mengetahui ukuran asli
             const viewportDefault = page.getViewport({ scale: 1 });
-            // Hitung skala yang dibutuhkan agar lebar PDF pas dengan lebar kontainer
             const scale = containerWidth / viewportDefault.width;
-            // Buat viewport baru dengan skala yang sudah dihitung
             const viewport = page.getViewport({ scale: scale });
-            // --- AKHIR LOGIKA SKALA DINAMIS ---
 
             const context = pdfCanvas.getContext('2d');
             pdfCanvas.height = viewport.height;
@@ -224,6 +327,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Mulai proses dengan memuat Google API
+    // Mulai semua proses
     loadGapi();
 });
