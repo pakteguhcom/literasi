@@ -1,4 +1,4 @@
-// script.js (Versi Lengkap dan Sudah Diperbaiki)
+// script.js (Versi Final Lengkap)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -32,19 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let pageRendering = false;
     let pageNumPending = null;
 
-    // Inisialisasi PDF.js worker
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
 
-    /**
-     * Memuat dan menginisialisasi Google API Client
-     */
     function loadGapi() {
         gapi.load('client', initClient);
     }
 
-    /**
-     * Menginisialisasi klien untuk Google Drive API
-     */
     function initClient() {
         gapi.client.init({
             'apiKey': API_KEY,
@@ -52,35 +45,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(fetchBooks);
     }
 
-    /**
-     * Mengambil daftar file PDF dari folder Google Drive yang ditentukan
-     */
     function fetchBooks() {
         loader.style.display = 'block';
         bookGallery.style.display = 'none';
 
         gapi.client.drive.files.list({
             'q': `'${FOLDER_ID}' in parents and mimeType='application/pdf'`,
-            'pageSize': 100, // Ambil hingga 100 buku
-            'fields': "files(id, name, thumbnailLink)" // Ambil data yang diperlukan
+            'pageSize': 100,
+            'fields': "files(id, name, thumbnailLink)"
         }).then(response => {
             const files = response.result.files;
-            allBooks = files.sort((a, b) => a.name.localeCompare(b.name)); // Urutkan berdasarkan nama
+            allBooks = files.sort((a, b) => a.name.localeCompare(b.name));
             displayBooks(allBooks);
             loader.style.display = 'none';
             bookGallery.style.display = 'grid';
         }).catch(err => {
             console.error("Error fetching files:", err);
             loader.style.display = 'none';
-            bookGallery.innerHTML = "<p style='text-align:center; color: red;'>Gagal memuat data buku. Periksa konsol untuk detailnya.</p>";
+            bookGallery.innerHTML = "<p style='text-align:center; color: red;'>Gagal memuat data buku.</p>";
             bookGallery.style.display = 'block';
         });
     }
 
-    /**
-     * Menampilkan buku-buku di galeri
-     * @param {Array} books - Array objek buku dari Google Drive API
-     */
     function displayBooks(books) {
         bookGallery.innerHTML = '';
         if (books && books.length > 0) {
@@ -112,9 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Menangani logika pencarian buku
-     */
     searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         const filteredBooks = allBooks.filter(book => 
@@ -123,9 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
         displayBooks(filteredBooks);
     });
 
-    /**
-     * Menangani klik pada kartu buku untuk membuka modal
-     */
     bookGallery.addEventListener('click', (e) => {
         const card = e.target.closest('.book-card');
         if (card) {
@@ -134,14 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    /**
-     * Membuka modal dan memuat PDF
-     * @param {string} fileId - ID file dari Google Drive
-     */
     function openPdfViewer(fileId) {
-        // PERBAIKAN BUG: Gunakan classList untuk menampilkan modal
         modal.classList.add('visible');
-        
         viewerLoader.style.display = 'block';
         pdfCanvas.style.display = 'none';
 
@@ -161,12 +135,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(err => {
             console.error("Error loading PDF:", err);
             viewerLoader.style.display = 'none';
-            document.getElementById('pdf-viewer-container').innerHTML = "<p style='color:red;'>Gagal memuat PDF. File mungkin tidak dapat diakses atau rusak.</p>";
+            document.getElementById('pdf-viewer-container').innerHTML = "<p style='color:red;'>Gagal memuat PDF.</p>";
         });
     }
 
     /**
-     * Merender halaman PDF tertentu ke canvas
+     * Merender halaman PDF dengan skala dinamis agar pas di layar
      * @param {number} num - Nomor halaman yang akan dirender
      */
     function renderPage(num) {
@@ -175,7 +149,18 @@ document.addEventListener('DOMContentLoaded', () => {
         pdfCanvas.style.display = 'none';
         
         pdfDoc.getPage(num).then(page => {
-            const viewport = page.getViewport({ scale: 1.5 });
+            // --- LOGIKA SKALA DINAMIS ---
+            const pdfViewerContainer = document.getElementById('pdf-viewer-container');
+            // Dapatkan lebar kontainer (dikurangi padding jika ada)
+            const containerWidth = pdfViewerContainer.clientWidth;
+            // Dapatkan viewport PDF dengan skala 1 untuk mengetahui ukuran asli
+            const viewportDefault = page.getViewport({ scale: 1 });
+            // Hitung skala yang dibutuhkan agar lebar PDF pas dengan lebar kontainer
+            const scale = containerWidth / viewportDefault.width;
+            // Buat viewport baru dengan skala yang sudah dihitung
+            const viewport = page.getViewport({ scale: scale });
+            // --- AKHIR LOGIKA SKALA DINAMIS ---
+
             const context = pdfCanvas.getContext('2d');
             pdfCanvas.height = viewport.height;
             pdfCanvas.width = viewport.width;
@@ -202,10 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateNavButtons();
     }
 
-    /**
-     * Mengantri render halaman jika halaman lain sedang diproses
-     * @param {number} num - Nomor halaman untuk diantrikan
-     */
     function queueRenderPage(num) {
         if (pageRendering) {
             pageNumPending = num;
@@ -214,15 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Memperbarui status tombol navigasi (sebelumnya/berikutnya)
-     */
     function updateNavButtons() {
         prevPageBtn.disabled = (pageNum <= 1);
         nextPageBtn.disabled = (pageNum >= pdfDoc.numPages);
     }
     
-    // Event listeners untuk navigasi PDF
     prevPageBtn.addEventListener('click', () => {
         if (pageNum <= 1) return;
         pageNum--;
@@ -235,16 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
         queueRenderPage(pageNum);
     });
 
-    // Menutup modal
     closeModalBtn.addEventListener('click', () => {
-        // PERBAIKAN BUG: Gunakan classList untuk menyembunyikan modal
         modal.classList.remove('visible');
-        pdfDoc = null; // Hapus referensi PDF untuk membebaskan memori
+        pdfDoc = null;
     });
 
     window.addEventListener('click', (e) => {
         if (e.target == modal) {
-            // PERBAIKAN BUG: Gunakan classList untuk menyembunyikan modal
             modal.classList.remove('visible');
             pdfDoc = null;
         }
