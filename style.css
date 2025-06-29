@@ -1,4 +1,4 @@
-/* style.css (Ganti semua isinya dengan kode ini) */
+/* style.css (Versi Final Lengkap) */
 
 /* General Styling */
 :root {
@@ -81,7 +81,6 @@ header h1 {
 /* Book Gallery */
 .book-gallery {
     display: grid;
-    /* Ubah minmax agar lebih fleksibel di mobile */
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 20px;
     padding: 30px 0;
@@ -130,13 +129,9 @@ header h1 {
     font-size: 15px;
 }
 
-/* Modal for PDF Viewer */
-/* style.css - KODE BARU YANG BENAR */
-
-/* GANTI BLOK .modal LAMA ANDA DENGAN INI */
+/* Modal & PDF Viewer (Desktop First) */
 .modal {
-    /* Set display ke none untuk menyembunyikannya secara default */
-    display: none;
+    display: none; /* Sembunyikan secara default */
     position: fixed;
     z-index: 2000;
     left: 0;
@@ -147,12 +142,12 @@ header h1 {
     animation: fadeIn 0.3s;
 }
 
-/* LALU, TAMBAHKAN BLOK BARU INI DI BAWAHNYA */
 .modal.visible {
-    /* Class ini akan kita gunakan di JS untuk menampilkan modal */
-    display: flex;
+    display: flex; /* Tampilkan dengan flex untuk memusatkan */
     align-items: center;
     justify-content: center;
+    overflow-y: auto; /* Izinkan modal di-scroll jika kontennya panjang */
+    padding: 40px 20px; /* Beri jarak atas-bawah di layar besar */
 }
 
 @keyframes fadeIn {
@@ -164,13 +159,12 @@ header h1 {
     background-color: #fefefe;
     border-radius: 10px;
     width: 90%;
-    max-width: 800px;
-    height: 90vh; /* Tinggi modal 90% dari tinggi layar */
+    max-width: 900px; /* Lebar maksimal untuk desktop */
     box-shadow: 0 5px 20px rgba(0,0,0,0.4);
     position: relative;
-    /* Tambahkan flexbox untuk menata viewer dan control */
     display: flex;
     flex-direction: column;
+    margin: auto; /* Memastikan posisi selalu di tengah */
 }
 
 .close-button {
@@ -191,30 +185,25 @@ header h1 {
 }
 
 #pdf-viewer-container {
-    /* Buat viewer memenuhi sisa ruang */
     flex-grow: 1;
-    overflow-y: auto;
-    text-align: center;
     padding: 10px;
+    text-align: center;
+    line-height: 0; /* Menghilangkan spasi ekstra di bawah canvas */
 }
 
-/* KUNCI UTAMA: Membuat Canvas Responsif */
 #pdf-canvas {
     border: 1px solid #ccc;
     box-shadow: var(--shadow);
-    /* Canvas akan menyesuaikan lebar kontainernya */
     max-width: 100%;
     height: auto;
 }
 
-/* KUNCI UTAMA: Membuat Navigasi Estetik */
 .pdf-controls {
     text-align: center;
-    padding: 10px;
+    padding: 10px 15px;
     background-color: #f1f1f1;
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
-    /* Gunakan Flexbox untuk menata tombol */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -225,7 +214,6 @@ header h1 {
     background-color: var(--secondary-color);
     color: white;
     border: none;
-    /* Jadikan tombol bulat */
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -255,7 +243,6 @@ header h1 {
 /* =================================== */
 /* ATURAN RESPONSIVE UNTUK MOBILE */
 /* =================================== */
-
 @media (max-width: 768px) {
     .container {
         padding: 0 15px;
@@ -266,9 +253,7 @@ header h1 {
     }
 
     .book-gallery {
-        /* Buat gap lebih kecil di mobile */
         gap: 15px;
-        /* Atur agar minimal ada 2 kolom jika memungkinkan */
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     }
 
@@ -281,10 +266,16 @@ header h1 {
         padding: 10px;
     }
 
-    /* Penyesuaian untuk Modal di Mobile */
+    /* Penyesuaian untuk Modal di Mobile (Fullscreen) */
+    .modal.visible {
+        padding: 0; /* Hapus padding di mobile agar modal penuh */
+    }
+
     .modal-content {
-        width: 95%;
-        height: 85vh;
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        border-radius: 0;
     }
 
     .close-button {
@@ -298,13 +289,13 @@ header h1 {
         background-color: white;
     }
 
-    /* Penyesuaian untuk Tombol Navigasi di Mobile */
     .pdf-controls button {
         width: 40px;
         height: 40px;
         font-size: 20px;
         line-height: 40px;
     }
+
     .pdf-controls span {
         font-size: 14px;
     }
