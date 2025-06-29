@@ -1,4 +1,4 @@
-// script.js (Versi Final dengan Navigasi Halaman & Hamburger)
+// script.js (Versi Final Lengkap dengan Navigasi Bar dan Perbaikan Bug)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- LOGIKA MODAL PDF (TIDAK BERUBAH) ---
+    // --- LOGIKA MODAL PDF ---
     function setupModalControls() {
         closeModalBtn.addEventListener('click', () => {
             modal.classList.remove('visible');
@@ -303,17 +303,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // FUNGSI INI SUDAH DIPERBAIKI
     function renderPage(num) {
         pageRendering = true;
+        viewerLoader.style.display = 'block';
+        pdfCanvas.style.display = 'none';
+        
         pdfDoc.getPage(num).then(page => {
             const containerWidth = document.getElementById('pdf-viewer-container').clientWidth;
             const viewport = page.getViewport({ scale: containerWidth / page.getViewport({ scale: 1 }).width });
             const context = pdfCanvas.getContext('2d');
             pdfCanvas.height = viewport.height;
             pdfCanvas.width = viewport.width;
+            
             const renderTask = page.render({ canvasContext: context, viewport: viewport });
+
             renderTask.promise.then(() => {
                 pageRendering = false;
+                viewerLoader.style.display = 'none';
+                pdfCanvas.style.display = 'block';
+
                 if (pageNumPending !== null) {
                     renderPage(pageNumPending);
                     pageNumPending = null;
