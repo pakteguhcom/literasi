@@ -5,36 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perpustakaan Digital</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
 </head>
 <body>
 
-    <header>
-        <div class="container">
-            <h1>Perpustakaan Digital</h1>
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Cari judul buku...">
+    <nav class="navbar">
+        <div class="container nav-wrapper">
+            <a href="#" class="nav-logo" data-page="home">Perpustakaan Digital</a>
+            <div class="menu-wrapper">
+                <ul class="nav-menu">
+                    <li><a href="#" class="nav-link" data-page="home">Beranda</a></li>
+                    <li class="dropdown-nav">
+                        <a href="#" class="nav-link">Kategori <svg class="arrow" width="16" height="16" viewBox="0 0 24 24"><path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+                        <div class="dropdown-content" id="category-dropdown">
+                            </div>
+                    </li>
+                    <li><a href="#" class="nav-link" data-page="about">Tentang</a></li>
+                </ul>
+                <div class="search-container-nav">
+                    <input type="text" id="searchInput" placeholder="Cari buku...">
+                </div>
+            </div>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
             </div>
         </div>
-    </header>
+    </nav>
 
-    <div class="category-container container">
-        <div class="dropdown-wrapper">
-            <button id="dropdown-btn" class="dropdown-btn">
-                <span>Semua Kategori</span>
-                <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <div id="category-dropdown" class="dropdown-content">
+    <div id="home-page" class="page-content active">
+        <main class="container">
+            <div id="loader" class="loader"></div>
+            <div id="book-gallery" class="book-gallery">
                 </div>
+        </main>
+    </div>
+
+    <div id="about-page" class="page-content">
+        <div class="container about-container">
+            <h2>Tentang Aplikasi Ini</h2>
+            <p>Aplikasi Perpustakaan Digital ini dibuat untuk menyediakan akses mudah dan cepat ke berbagai koleksi buku digital.</p>
+            <p>Dikembangkan dengan ❤️ oleh [Nama Anda].</p>
+            <hr>
+            <h3>Teknologi yang Digunakan:</h3>
+            <ul>
+                <li>HTML5, CSS3, dan JavaScript (ES6+)</li>
+                <li>Google Drive API untuk manajemen data buku</li>
+                <li>PDF.js (oleh Mozilla) untuk menampilkan buku</li>
+                <li>GitHub Pages untuk hosting</li>
+            </ul>
         </div>
     </div>
 
-    <main class="container">
-        <div id="loader" class="loader"></div>
-        <div id="book-gallery" class="book-gallery">
-            </div>
-    </main>
 
     <div id="pdf-modal" class="modal">
         <div class="modal-content">
