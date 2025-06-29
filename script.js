@@ -1,3 +1,5 @@
+// script.js (Versi Lengkap dan Sudah Diperbaiki)
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- KONFIGURASI ---
@@ -88,11 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.dataset.fileId = book.id;
                 card.dataset.fileName = book.name;
 
-                // Gunakan thumbnail jika ada, jika tidak, tampilkan placeholder
                 const cover = document.createElement('div');
                 cover.className = 'book-cover';
                 if (book.thumbnailLink) {
-                    // thumbnailLink dari Google Drive perlu sedikit diubah untuk ukuran lebih besar
                     const highResThumb = book.thumbnailLink.replace('s220', 's400');
                     cover.innerHTML = `<img src="${highResThumb}" alt="Sampul ${book.name}" loading="lazy">`;
                 } else {
@@ -101,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const title = document.createElement('div');
                 title.className = 'book-title';
-                // Hapus ekstensi .pdf dari judul
                 title.textContent = book.name.replace(/\.pdf$/i, '');
 
                 card.appendChild(cover);
@@ -140,17 +139,16 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} fileId - ID file dari Google Drive
      */
     function openPdfViewer(fileId) {
-        modal.style.display = 'block';
+        // PERBAIKAN BUG: Gunakan classList untuk menampilkan modal
+        modal.classList.add('visible');
+        
         viewerLoader.style.display = 'block';
         pdfCanvas.style.display = 'none';
 
-        // URL untuk mengunduh konten file, bukan halaman webnya
         const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
         
-        // Menggunakan PDF.js untuk memuat dokumen dari URL
         const loadingTask = pdfjsLib.getDocument({ 
             url: url,
-            // Menonaktifkan font bawaan untuk mempercepat render
             cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/cmaps/`,
             cMapPacked: true,
         });
@@ -173,8 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function renderPage(num) {
         pageRendering = true;
-        
-        // Tampilkan loader saat halaman sedang dirender
         viewerLoader.style.display = 'block';
         pdfCanvas.style.display = 'none';
         
@@ -241,13 +237,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Menutup modal
     closeModalBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
+        // PERBAIKAN BUG: Gunakan classList untuk menyembunyikan modal
+        modal.classList.remove('visible');
         pdfDoc = null; // Hapus referensi PDF untuk membebaskan memori
     });
 
     window.addEventListener('click', (e) => {
         if (e.target == modal) {
-            modal.style.display = 'none';
+            // PERBAIKAN BUG: Gunakan classList untuk menyembunyikan modal
+            modal.classList.remove('visible');
             pdfDoc = null;
         }
     });
