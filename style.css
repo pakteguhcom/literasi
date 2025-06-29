@@ -1,8 +1,10 @@
+/* style.css (Ganti semua isinya dengan kode ini) */
+
 /* General Styling */
 :root {
     --primary-color: #2c3e50;
     --secondary-color: #3498db;
-    --background-color: #ecf0f1;
+    --background-color: #f4f6f9;
     --card-bg-color: #ffffff;
     --text-color: #34495e;
     --shadow: 0 4px 15px rgba(0,0,0,0.1);
@@ -37,6 +39,7 @@ header h1 {
     text-align: center;
     margin: 0;
     font-weight: 600;
+    font-size: 24px;
 }
 
 .search-container {
@@ -45,7 +48,7 @@ header h1 {
 }
 
 #searchInput {
-    width: 60%;
+    width: 80%;
     max-width: 500px;
     padding: 12px 20px;
     border-radius: 25px;
@@ -75,13 +78,13 @@ header h1 {
     100% { transform: rotate(360deg); }
 }
 
-
 /* Book Gallery */
 .book-gallery {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 30px;
-    padding: 40px 0;
+    /* Ubah minmax agar lebih fleksibel di mobile */
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 30px 0;
 }
 
 .book-card {
@@ -96,13 +99,13 @@ header h1 {
 }
 
 .book-card:hover {
-    transform: translateY(-10px);
+    transform: translateY(-8px);
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
 }
 
 .book-cover {
     width: 100%;
-    height: 300px;
+    height: 280px;
     background-color: #e0e0e0;
     display: flex;
     align-items: center;
@@ -124,6 +127,7 @@ header h1 {
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 15px;
 }
 
 /* Modal for PDF Viewer */
@@ -135,9 +139,12 @@ header h1 {
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.8);
+    background-color: rgba(0,0,0,0.85);
     animation: fadeIn 0.3s;
+    /* Tambahkan flex untuk memusatkan konten */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 @keyframes fadeIn {
@@ -147,71 +154,150 @@ header h1 {
 
 .modal-content {
     background-color: #fefefe;
-    margin: 2% auto;
     border-radius: 10px;
     width: 90%;
     max-width: 800px;
+    height: 90vh; /* Tinggi modal 90% dari tinggi layar */
     box-shadow: 0 5px 20px rgba(0,0,0,0.4);
     position: relative;
+    /* Tambahkan flexbox untuk menata viewer dan control */
+    display: flex;
+    flex-direction: column;
 }
 
 .close-button {
-    color: #aaa;
+    color: white;
+    background-color: rgba(0,0,0,0.5);
+    border-radius: 50%;
     position: absolute;
-    top: 10px;
-    right: 25px;
-    font-size: 35px;
+    top: -15px;
+    right: -15px;
+    width: 35px;
+    height: 35px;
+    font-size: 25px;
+    line-height: 35px;
+    text-align: center;
     font-weight: bold;
     cursor: pointer;
-}
-
-.close-button:hover,
-.close-button:focus {
-    color: #000;
+    z-index: 10;
 }
 
 #pdf-viewer-container {
-    width: 100%;
-    height: 75vh;
+    /* Buat viewer memenuhi sisa ruang */
+    flex-grow: 1;
     overflow-y: auto;
     text-align: center;
-    padding-top: 20px;
+    padding: 10px;
 }
 
+/* KUNCI UTAMA: Membuat Canvas Responsif */
 #pdf-canvas {
     border: 1px solid #ccc;
     box-shadow: var(--shadow);
+    /* Canvas akan menyesuaikan lebar kontainernya */
+    max-width: 100%;
+    height: auto;
 }
 
+/* KUNCI UTAMA: Membuat Navigasi Estetik */
 .pdf-controls {
     text-align: center;
-    padding: 15px;
+    padding: 10px;
     background-color: #f1f1f1;
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
+    /* Gunakan Flexbox untuk menata tombol */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .pdf-controls button {
     background-color: var(--secondary-color);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
+    /* Jadikan tombol bulat */
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     cursor: pointer;
-    font-size: 14px;
-    margin: 0 10px;
-    transition: background-color 0.2s;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 44px;
+    transition: background-color 0.2s, transform 0.2s;
 }
 
 .pdf-controls button:hover {
     background-color: #2980b9;
+    transform: scale(1.1);
 }
 
 .pdf-controls button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
+    transform: scale(1);
 }
 
-#page-num, #page-count {
+.pdf-controls span {
     font-weight: bold;
+    font-size: 16px;
+}
+
+/* =================================== */
+/* ATURAN RESPONSIVE UNTUK MOBILE */
+/* =================================== */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+
+    header h1 {
+        font-size: 20px;
+    }
+
+    .book-gallery {
+        /* Buat gap lebih kecil di mobile */
+        gap: 15px;
+        /* Atur agar minimal ada 2 kolom jika memungkinkan */
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+
+    .book-cover {
+        height: 200px;
+    }
+    
+    .book-title {
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    /* Penyesuaian untuk Modal di Mobile */
+    .modal-content {
+        width: 95%;
+        height: 85vh;
+    }
+
+    .close-button {
+        top: 5px;
+        right: 5px;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        font-size: 20px;
+        color: #333;
+        background-color: white;
+    }
+
+    /* Penyesuaian untuk Tombol Navigasi di Mobile */
+    .pdf-controls button {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        line-height: 40px;
+    }
+    .pdf-controls span {
+        font-size: 14px;
+    }
 }
