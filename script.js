@@ -1,4 +1,4 @@
-// script.js (Versi Final dengan Fitur Kategori)
+// script.js (Versi Final dengan Fitur Dropdown Kategori)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -12,9 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookGallery = document.getElementById('book-gallery');
     const loader = document.getElementById('loader');
     const searchInput = document.getElementById('searchInput');
-    const categoryFilters = document.getElementById('category-filters');
-
-    // ... (Elemen DOM untuk modal tetap sama)
+    // Elemen baru untuk dropdown
+    const dropdownWrapper = document.querySelector('.dropdown-wrapper');
+    const dropdownBtn = document.getElementById('dropdown-btn');
+    const dropdownContent = document.getElementById('category-dropdown');
+    const dropdownBtnText = dropdownBtn.querySelector('span');
+    
+    // Elemen DOM untuk modal
     const modal = document.getElementById('pdf-modal');
     const closeModalBtn = document.querySelector('.close-button');
     const pdfCanvas = document.getElementById('pdf-canvas');
@@ -24,13 +28,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageCountSpan = document.getElementById('page-count');
     const viewerLoader = document.getElementById('viewer-loader');
     
-    let allBooks = []; // Sekarang akan berisi objek {..., category: 'Nama Kategori'}
+    let allBooks = [];
     let pdfDoc = null;
     let pageNum = 1;
     let pageRendering = false;
     let pageNumPending = null;
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
+
+    // --- LOGIKA DROPDOWN BARU ---
+    dropdownBtn.addEventListener('click', () => {
+        dropdownWrapper.classList.toggle('open');
+    });
+
+    window.addEventListener('click', (e) => {
+        if (!dropdownWrapper.contains(e.target)) {
+            dropdownWrapper.classList.remove('open');
+        }
+    });
+    // --- AKHIR LOGIKA DROPDOWN ---
 
     function loadGapi() {
         gapi.load('client', initClient);
@@ -40,13 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
         gapi.client.init({
             'apiKey': API_KEY,
             'discoveryDocs': ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-        }).then(fetchFoldersAndFiles); // Ganti fungsi yang dipanggil
+        }).then(fetchFoldersAndFiles);
     }
 
-    /**
-     * LOGIKA BARU: Tahap 1
-     * Mengambil semua item (folder dan file) dari folder utama.
-     */
     function fetchFoldersAndFiles() {
         loader.style.display = 'block';
         bookGallery.style.display = 'none';
@@ -54,53 +66,36 @@ document.addEventListener('DOMContentLoaded', () => {
         gapi.client.drive.files.list({
             'q': `'${FOLDER_ID}' in parents`,
             'pageSize': 100,
-            'fields': "files(id, name, mimeType)" // Ambil tipe mime untuk membedakan folder/file
+            'fields': "files(id, name, mimeType)"
         }).then(response => {
             const items = response.result.files;
-            
-            // Pisahkan antara folder (kategori) dan file PDF di folder utama
             const folders = items.filter(item => item.mimeType === 'application/vnd.google-apps.folder');
             const rootFiles = items.filter(item => item.mimeType === 'application/pdf');
 
-            // Tambahkan file di folder utama ke daftar buku dengan kategori 'Lainnya'
             allBooks.push(...rootFiles.map(file => ({ ...file, category: 'Lainnya' })));
-            
-            // Proses setiap folder untuk mengambil file PDF di dalamnya
             processFolders(folders);
         });
     }
 
-    /**
-     * LOGIKA BARU: Tahap 2
-     * Memproses setiap folder untuk mengambil PDF di dalamnya secara paralel.
-     * @param {Array} folders - Daftar folder yang akan diproses.
-     */
     async function processFolders(folders) {
-        // Buat array dari promise, di mana setiap promise mengambil file dari satu folder
         const promises = folders.map(folder => 
             gapi.client.drive.files.list({
                 'q': `'${folder.id}' in parents and mimeType='application/pdf'`,
                 'pageSize': 100,
                 'fields': "files(id, name)"
             }).then(response => {
-                // Tambahkan kategori ke setiap buku yang ditemukan
                 const files = response.result.files;
                 return files.map(file => ({ ...file, category: folder.name }));
             })
         );
         
-        // Tunggu semua promise (pengambilan file) selesai
         const results = await Promise.all(promises);
-
-        // Gabungkan semua buku dari semua folder ke dalam `allBooks`
         results.forEach(booksFromFolder => {
             allBooks.push(...booksFromFolder);
         });
 
-        // Setelah semua buku terkumpul, urutkan dan tampilkan
         allBooks.sort((a, b) => a.name.localeCompare(b.name));
         
-        // Tampilkan semuanya
         displayCategories();
         displayBooks(allBooks);
 
@@ -109,41 +104,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * LOGIKA BARU: Menampilkan tombol-tombol filter kategori.
+     * LOGIKA BARU: Mengisi item ke dalam dropdown menu.
      */
     function displayCategories() {
-        // Ambil nama kategori unik dari semua buku
-        const categories = ['Semua', ...new Set(allBooks.map(book => book.category))];
-        categoryFilters.innerHTML = '';
+        const categories = ['Semua Kategori', ...new Set(allBooks.map(book => book.category))];
+        dropdownContent.innerHTML = '';
         
         categories.forEach(category => {
-            const button = document.createElement('button');
-            button.className = 'filter-btn';
-            button.textContent = category;
-            button.dataset.category = category;
+            const link = document.createElement('a');
+            link.textContent = category;
+            link.dataset.category = category;
             
-            if (category === 'Semua') {
-                button.classList.add('active');
+            if (category === 'Semua Kategori') {
+                link.classList.add('active');
             }
             
-            button.addEventListener('click', handleCategoryClick);
-            categoryFilters.appendChild(button);
+            link.addEventListener('click', handleCategoryClick);
+            dropdownContent.appendChild(link);
         });
     }
     
     /**
-     * LOGIKA BARU: Menangani klik pada tombol filter kategori.
-     * @param {Event} e - Event klik.
+     * LOGIKA BARU: Menangani klik pada item dropdown.
      */
     function handleCategoryClick(e) {
+        e.preventDefault(); // Mencegah link melakukan navigasi
         const selectedCategory = e.target.dataset.category;
         
-        // Hapus class 'active' dari semua tombol, lalu tambahkan ke yang diklik
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        // Update teks tombol utama
+        dropdownBtnText.textContent = selectedCategory;
+
+        // Tutup dropdown
+        dropdownWrapper.classList.remove('open');
+        
+        // Hapus class 'active' dari semua link, lalu tambahkan ke yang diklik
+        document.querySelectorAll('.dropdown-content a').forEach(a => a.classList.remove('active'));
         e.target.classList.add('active');
         
-        // Filter buku berdasarkan kategori yang dipilih
-        if (selectedCategory === 'Semua') {
+        // Kosongkan pencarian
+        searchInput.value = '';
+
+        // Filter buku berdasarkan kategori
+        if (selectedCategory === 'Semua Kategori') {
             displayBooks(allBooks);
         } else {
             const filteredBooks = allBooks.filter(book => book.category === selectedCategory);
@@ -151,14 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Diperbarui: Sekarang mengambil thumbnailLink karena tidak diambil di awal.
-     * @param {Array} books - Array objek buku untuk ditampilkan.
-     */
     async function displayBooks(books) {
-        bookGallery.innerHTML = '';
+        bookGallery.innerHTML = '<div class="loader"></div>'; // Tampilkan loader sementara
         
-        // Buat promise untuk mengambil thumbnail untuk setiap buku yang ditampilkan
         const thumbnailPromises = books.map(book => 
             gapi.client.drive.files.get({
                 fileId: book.id,
@@ -167,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         const booksWithThumbnails = await Promise.all(thumbnailPromises);
+        bookGallery.innerHTML = ''; // Hapus loader
         
         if (booksWithThumbnails.length > 0) {
             booksWithThumbnails.forEach(book => {
@@ -193,19 +191,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 bookGallery.appendChild(card);
             });
         } else {
-            bookGallery.innerHTML = "<p style='text-align:center;'>Tidak ada buku yang ditemukan di kategori ini.</p>";
+            bookGallery.innerHTML = "<p style='text-align:center;'>Tidak ada buku yang ditemukan.</p>";
         }
     }
 
-    // Fungsi pencarian tetap sama
     searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        // Pastikan filter aktif tetap berlaku saat mencari
-        const activeCategoryBtn = document.querySelector('.filter-btn.active');
-        const activeCategory = activeCategoryBtn.dataset.category;
+        const activeCategoryLink = document.querySelector('.dropdown-content a.active');
+        const activeCategory = activeCategoryLink.dataset.category;
         
         let booksToSearch = allBooks;
-        if (activeCategory !== 'Semua') {
+        if (activeCategory !== 'Semua Kategori') {
             booksToSearch = allBooks.filter(book => book.category === activeCategory);
         }
 
@@ -215,10 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
         displayBooks(filteredBooks);
     });
 
-    // ==========================================================
-    // SISA KODE (MODAL VIEWER) TIDAK ADA PERUBAHAN
-    // Cukup salin dari kode script.js Anda yang sudah ada
-    // ==========================================================
+    // ===================================
+    // KODE MODAL VIEWER TIDAK BERUBAH
+    // ===================================
     bookGallery.addEventListener('click', (e) => {
         const card = e.target.closest('.book-card');
         if (card) {
@@ -327,6 +322,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Mulai semua proses
     loadGapi();
 });
