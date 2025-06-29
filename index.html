@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perpustakaan Digital</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <h1>Perpustakaan Digital</h1>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Cari judul buku...">
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="loader" class="loader"></div>
+        <div id="book-gallery" class="book-gallery">
+            </div>
+    </main>
+
+    <div id="pdf-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div id="pdf-viewer-container">
+                <div id="viewer-loader" class="loader"></div>
+                <canvas id="pdf-canvas"></canvas>
+            </div>
+            <div class="pdf-controls">
+                <button id="prev-page">‹ Halaman Sebelumnya</button>
+                <span id="page-num"></span> / <span id="page-count"></span>
+                <button id="next-page">Halaman Berikutnya ›</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="script.js"></script>
+
+</body>
+</html>
