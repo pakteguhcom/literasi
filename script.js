@@ -1,11 +1,10 @@
-// script.js (Versi Final dengan Optimasi Kinerja & Skeleton Loading)
+// script.js (Versi Final yang Lebih Cepat dan Stabil)
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- KONFIGURASI ---
     const API_KEY = 'AIzaSyCXetZR21T2WrT42K3VQlrFM-CxAYYvg3U';
     const FOLDER_ID = '1SlotOnzWfK0imRA1uCETvJC076Hmcq5-';
-    const CACHE_DURATION = 30 * 60 * 1000; // 30 menit dalam milidetik
     // --- AKHIR KONFIGURASI ---
 
 
@@ -18,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropdownNav = document.querySelector('.dropdown-nav');
     const categoryDropdown = document.getElementById('category-dropdown');
     const bookGallery = document.getElementById('book-gallery');
-    const loader = document.getElementById('loader');
     const searchInput = document.getElementById('searchInput');
     const modal = document.getElementById('pdf-modal');
     const closeModalBtn = document.querySelector('.close-button');
@@ -124,35 +122,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initClient() {
+        // Tampilkan skeleton SEGERA setelah gapi siap
+        displaySkeletonLoading();
         gapi.client.init({
             apiKey: API_KEY,
             discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-        }).then(loadBooks); // Panggil fungsi utama untuk memuat buku
+        }).then(fetchFoldersAndFiles);
     }
-
-    /**
-     * FUNGSI BARU: Memeriksa cache sebelum mengambil data dari API
-     */
-    function loadBooks() {
-        const cachedBooks = sessionStorage.getItem('bookCache');
-        const cacheTimestamp = sessionStorage.getItem('cacheTimestamp');
-
-        if (cachedBooks && cacheTimestamp && (Date.now() - cacheTimestamp < CACHE_DURATION)) {
-            // Jika ada cache yang valid, gunakan
-            allBooks = JSON.parse(cachedBooks);
-            initializeApp();
-        } else {
-            // Jika tidak, ambil dari API
-            displaySkeletonLoading(); // Tampilkan skeleton
-            fetchFoldersAndFiles();
-        }
-    }
-
-    /**
-     * FUNGSI BARU: Menampilkan kerangka loading
-     */
+    
+    // Fungsi untuk menampilkan kerangka loading
     function displaySkeletonLoading() {
-        loader.style.display = 'none';
         bookGallery.style.display = 'grid';
         bookGallery.innerHTML = '';
         for (let i = 0; i < 12; i++) {
@@ -162,11 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * FUNGSI DIPERBARUI: Mengambil data dengan lebih efisien
-     */
+    // Fungsi yang disederhanakan dan dioptimalkan untuk mengambil data
     function fetchFoldersAndFiles() {
-        const fields = "files(id, name, mimeType, thumbnailLink)"; // Minta thumbnailLink dari awal!
+        // OPTIMASI: Minta thumbnailLink dari awal untuk mengurangi panggilan API
+        const fields = "files(id, name, mimeType, thumbnailLink)"; 
+        
         gapi.client.drive.files.list({
             'q': `'${FOLDER_ID}' in parents`,
             'pageSize': 100,
@@ -178,37 +157,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let fetchedBooks = rootFiles.map(file => ({ ...file, category: 'Lainnya' }));
             
-            // Buat promise untuk setiap folder
             const folderPromises = folders.map(folder =>
                 gapi.client.drive.files.list({
                     q: `'${folder.id}' in parents and mimeType='application/pdf'`,
                     pageSize: 100,
-                    fields: fields
+                    fields: fields // Minta thumbnailLink juga untuk file di dalam folder
                 }).then(res => res.result.files.map(file => ({ ...file, category: folder.name })))
             );
 
-            // Jalankan semua promise secara paralel
             Promise.all(folderPromises).then(results => {
                 results.forEach(booksFromFolder => fetchedBooks.push(...booksFromFolder));
                 allBooks = fetchedBooks.sort((a, b) => a.name.localeCompare(b.name));
                 
-                // Simpan ke cache
-                sessionStorage.setItem('bookCache', JSON.stringify(allBooks));
-                sessionStorage.setItem('cacheTimestamp', Date.now());
-                
-                initializeApp();
+                // Setelah semua data siap, tampilkan kategori dan buku
+                displayCategories();
+                displayBooks(allBooks);
             });
+        }).catch(err => {
+            console.error("Gagal mengambil data dari Google Drive:", err);
+            bookGallery.innerHTML = `<p style='text-align:center; color: red;'>Gagal memuat buku. Silakan coba muat ulang halaman.</p>`;
         });
-    }
-
-    /**
-     * FUNGSI BARU: Menginisialisasi aplikasi setelah data siap
-     */
-    function initializeApp() {
-        loader.style.display = 'none';
-        bookGallery.style.display = 'grid';
-        displayCategories();
-        displayBooks(allBooks);
     }
 
     function displayCategories() {
@@ -226,9 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * FUNGSI DIPERBARUI: Tidak perlu lagi ambil thumbnail, tinggal tampilkan dengan animasi
-     */
+    // Fungsi ini sekarang jauh lebih cepat karena tidak ada lagi panggilan API di dalamnya
     function displayBooks(books) {
         bookGallery.innerHTML = '';
         if (books.length > 0) {
@@ -260,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- LOGIKA MODAL PDF (Tidak berubah signifikan) ---
+    // --- LOGIKA MODAL PDF (Tidak berubah) ---
     function setupModalControls() {
         closeModalBtn.addEventListener('click', () => {
             modal.classList.remove('visible');
