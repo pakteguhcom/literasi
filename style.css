@@ -1,4 +1,4 @@
-/* style.css (Versi Final Lengkap dengan Filter Kategori) */
+/* style.css (Versi Final Lengkap dengan Dropdown Menu) */
 
 /* General Styling */
 :root {
@@ -62,43 +62,82 @@ header h1 {
     box-shadow: 0 0 10px var(--secondary-color);
 }
 
-/* Category Filters Styling */
+/* KUNCI PERUBAHAN: Category Dropdown Styling */
 .category-container {
-    padding-top: 20px;
-    padding-bottom: 10px;
-    background-color: var(--background-color);
-}
-
-#category-filters {
+    padding: 20px 0 10px 0;
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
     justify-content: center;
 }
 
-.filter-btn {
-    background-color: #fff;
-    color: var(--primary-color);
-    border: 1px solid #ddd;
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s ease;
+.dropdown-wrapper {
+    position: relative;
+    display: inline-block;
 }
 
-.filter-btn:hover {
-    background-color: var(--secondary-color);
-    color: white;
+.dropdown-btn {
+    background-color: white;
+    color: var(--primary-color);
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: 500;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 250px;
+    transition: all 0.2s;
+}
+
+.dropdown-btn:hover {
     border-color: var(--secondary-color);
 }
 
-.filter-btn.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+.dropdown-btn .arrow {
+    transition: transform 0.3s ease;
 }
+
+.dropdown-wrapper.open .dropdown-btn .arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: white;
+    min-width: 250px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1100;
+    border-radius: 8px;
+    margin-top: 5px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.dropdown-content a {
+    color: var(--text-color);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.dropdown-content a:hover {
+    background-color: #f1f1f1;
+}
+
+.dropdown-content a.active {
+    background-color: var(--secondary-color);
+    color: white;
+    font-weight: bold;
+}
+
+.dropdown-wrapper.open .dropdown-content {
+    display: block;
+}
+
 
 /* Loader */
 .loader {
