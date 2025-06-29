@@ -1,4 +1,4 @@
-/* style.css (Versi Final Lengkap) */
+/* style.css (Versi Final dengan Navigasi Sticky) */
 
 /* General Styling */
 :root {
@@ -129,9 +129,9 @@ header h1 {
     font-size: 15px;
 }
 
-/* Modal & PDF Viewer (Desktop First) */
+/* Modal & PDF Viewer */
 .modal {
-    display: none; /* Sembunyikan secara default */
+    display: none;
     position: fixed;
     z-index: 2000;
     left: 0;
@@ -143,11 +143,10 @@ header h1 {
 }
 
 .modal.visible {
-    display: flex; /* Tampilkan dengan flex untuk memusatkan */
+    display: flex;
     align-items: center;
     justify-content: center;
-    overflow-y: auto; /* Izinkan modal di-scroll jika kontennya panjang */
-    padding: 40px 20px; /* Beri jarak atas-bawah di layar besar */
+    padding: 20px; /* Beri sedikit padding di sekitar modal */
 }
 
 @keyframes fadeIn {
@@ -155,16 +154,21 @@ header h1 {
     to {opacity: 1;}
 }
 
+/* KUNCI PERBAIKAN: Arsitektur Modal Content */
 .modal-content {
     background-color: #fefefe;
     border-radius: 10px;
     width: 90%;
-    max-width: 900px; /* Lebar maksimal untuk desktop */
+    max-width: 900px;
+    /* Batasi tinggi modal agar tidak melebihi layar */
+    max-height: 95vh;
     box-shadow: 0 5px 20px rgba(0,0,0,0.4);
     position: relative;
+    /* Gunakan flexbox untuk menata konten dan navigasi */
     display: flex;
     flex-direction: column;
-    margin: auto; /* Memastikan posisi selalu di tengah */
+    margin: auto;
+    overflow: hidden; /* Sembunyikan overflow di sini */
 }
 
 .close-button {
@@ -184,11 +188,15 @@ header h1 {
     z-index: 10;
 }
 
+/* KUNCI PERBAIKAN: Kontainer PDF yang bisa di-scroll */
 #pdf-viewer-container {
+    /* Biarkan kontainer ini mengisi ruang yang tersedia */
     flex-grow: 1;
+    /* Buat HANYA kontainer ini yang bisa di-scroll */
+    overflow-y: auto;
     padding: 10px;
     text-align: center;
-    line-height: 0; /* Menghilangkan spasi ekstra di bawah canvas */
+    line-height: 0;
 }
 
 #pdf-canvas {
@@ -198,6 +206,7 @@ header h1 {
     height: auto;
 }
 
+/* KUNCI PERBAIKAN: Pastikan Navigasi tidak ikut scroll */
 .pdf-controls {
     text-align: center;
     padding: 10px 15px;
@@ -207,7 +216,10 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    /* Pastikan navigasi tidak mengecil */
     flex-shrink: 0;
+    position: relative;
+    z-index: 5;
 }
 
 .pdf-controls button {
@@ -240,9 +252,7 @@ header h1 {
     font-size: 16px;
 }
 
-/* =================================== */
-/* ATURAN RESPONSIVE UNTUK MOBILE */
-/* =================================== */
+/* Aturan Responsif untuk Mobile */
 @media (max-width: 768px) {
     .container {
         padding: 0 15px;
@@ -265,16 +275,16 @@ header h1 {
         font-size: 14px;
         padding: 10px;
     }
-
-    /* Penyesuaian untuk Modal di Mobile (Fullscreen) */
+    
     .modal.visible {
-        padding: 0; /* Hapus padding di mobile agar modal penuh */
+        padding: 0;
     }
-
+    
     .modal-content {
         width: 100%;
         height: 100%;
         max-width: 100%;
+        max-height: 100%;
         border-radius: 0;
     }
 
