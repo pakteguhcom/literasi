@@ -131,7 +131,11 @@ header h1 {
 }
 
 /* Modal for PDF Viewer */
+/* style.css - KODE BARU YANG BENAR */
+
+/* GANTI BLOK .modal LAMA ANDA DENGAN INI */
 .modal {
+    /* Set display ke none untuk menyembunyikannya secara default */
     display: none;
     position: fixed;
     z-index: 2000;
@@ -141,7 +145,11 @@ header h1 {
     height: 100%;
     background-color: rgba(0,0,0,0.85);
     animation: fadeIn 0.3s;
-    /* Tambahkan flex untuk memusatkan konten */
+}
+
+/* LALU, TAMBAHKAN BLOK BARU INI DI BAWAHNYA */
+.modal.visible {
+    /* Class ini akan kita gunakan di JS untuk menampilkan modal */
     display: flex;
     align-items: center;
     justify-content: center;
